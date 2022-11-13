@@ -2,3 +2,10 @@
 .idea
 .vscode
 *.vcd
+
+# Python
+__pycache__
+
+# Testing
+sim_build
+results.xml
