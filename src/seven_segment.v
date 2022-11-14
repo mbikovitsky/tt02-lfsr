@@ -16,7 +16,7 @@ module seven_segment (
             'h6:        segments = 8'b01111101;
             'h7:        segments = 8'b00000111;
             'h8:        segments = 8'b01111111;
-            'h9:        segments = 8'b01100111;
+            'h9:        segments = 8'b01101111;
             'hA:        segments = 8'b01110111;
             'hB:        segments = 8'b01111100;
             'hC:        segments = 8'b00111001;
@@ -34,7 +34,7 @@ module seven_segment (
             'h16:       segments = 8'b11111101;
             'h17:       segments = 8'b10000111;
             'h18:       segments = 8'b11111111;
-            'h19:       segments = 8'b11100111;
+            'h19:       segments = 8'b11101111;
             'h1A:       segments = 8'b11110111;
             'h1B:       segments = 8'b11111100;
             'h1C:       segments = 8'b10111001;
