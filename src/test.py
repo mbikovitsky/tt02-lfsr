@@ -53,10 +53,13 @@ async def _test_lfsr(dut, initial_state: int, taps: int):
     for _ in range(2**LFSR_BITS):
         await Timer(1, units="sec")
 
-        state = int("".join(str(int(x)) for x in lfsr_reference.state), 2)
-        assert dut.data_out.value.integer == state
+        expected_state = int("".join(str(int(x)) for x in lfsr_reference.state), 2)
 
-        encountered.add(state)
+        state = _seven_segment_to_number(dut.data_out.value.integer)
+
+        assert state == expected_state
+
+        encountered.add(expected_state)
 
         lfsr_reference.step()
 
@@ -77,3 +80,34 @@ def _bits_lits(number: int, bits: int) -> List[int]:
 
 def _get_bit(number: int, bit: int) -> int:
     return (number >> bit) & 1
+
+
+SEVEN_SEGMENT_DECODER = {
+    0b0111111: 0,
+    0b0000110: 1,
+    0b1011011: 2,
+    0b1001111: 3,
+    0b1100110: 4,
+    0b1101101: 5,
+    0b1111101: 6,
+    0b0000111: 7,
+    0b1111111: 8,
+    0b1100111: 9,
+    0b1110111: 10,
+    0b1111100: 11,
+    0b0111001: 12,
+    0b1011110: 13,
+    0b1111001: 14,
+    0b1110001: 15,
+}
+
+def _seven_segment_to_number(bits: int):
+    result = 0
+
+    if bits & (1 << 7):
+        result += 0x10
+        bits &= 0x7F
+
+    result += SEVEN_SEGMENT_DECODER[bits]
+
+    return result

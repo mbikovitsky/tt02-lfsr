@@ -15,8 +15,10 @@ module mbikovitsky_top #(
     wire [4:0] data_in = io_in[3+LFSR_BITS-1:3];
 
     // Assign the output
-    assign io_out[LFSR_BITS-1:0] = lfsr;
-    assign io_out[7:LFSR_BITS] = 0;
+    seven_segment seven_segment (
+        .value(lfsr),
+        .segments(io_out)
+    );
 
     reg [LFSR_BITS-1:0] taps;
     reg [LFSR_BITS-1:0] lfsr;
