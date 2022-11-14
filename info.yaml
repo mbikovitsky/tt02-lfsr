@@ -20,7 +20,9 @@ documentation:
     5. Assert reset_lfsr
     6. Deassert reset_lfsr
     7. Look at it go!
-  external_hw:  "Logic analyzer for reading the binary output"
+       - Values between 0x00-0x0F are output as hex digits.
+       - Values between 0x10-0x1F are output as hex digits with a dot.
+  external_hw:  ""
   language:     "verilog"
   doc_link:     ""
   clock_hz:     1000
@@ -40,6 +42,6 @@ documentation:
     - data_out3
     - data_out4
     - data_out5
-    - none
-    - none
-    - none
+    - data_out6
+    - data_out7
+    - data_out8
