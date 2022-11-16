@@ -1,16 +1,17 @@
 module mbikovitsky_top #(
-    parameter LFSR_BITS = 5,
     parameter CLOCK_HZ = 1000
 ) (
     input [7:0] io_in,
     output [7:0] io_out
 );
 
+    localparam LFSR_BITS = 5;
+
     // Decompose the input wires
     wire clk = io_in[0];
     wire reset_lfsr = io_in[1];
     wire reset_taps = io_in[2];
-    wire [4:0] data_in = io_in[3+LFSR_BITS-1:3];
+    wire [LFSR_BITS-1:0] data_in = io_in[3+LFSR_BITS-1:3];
 
     // Assign the output
     seven_segment seven_segment (
