@@ -15,7 +15,7 @@ module tb (
         #1;
     end
 
-    mbikovitsky_top mbikovitsky_top (
+    mbikovitsky_top #(.CLOCK_HZ(1)) mbikovitsky_top (
         .io_in ({data_in, reset_taps, reset_lfsr, clk}),
         .io_out (data_out)
     );

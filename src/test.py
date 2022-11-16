@@ -30,7 +30,7 @@ async def test_zero_initial_state(dut):
 
 
 async def _test_lfsr(dut, initial_state: int, taps: int):
-    clock = Clock(dut.clk, 1, units="ms")  # 1000 Hz
+    clock = Clock(dut.clk, 1, units="sec")  # 1 Hz
     cocotb.start_soon(clock.start())
 
     lfsr_reference = GLFSR.Taps(
