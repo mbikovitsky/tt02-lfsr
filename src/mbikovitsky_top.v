@@ -1,12 +1,10 @@
 module mbikovitsky_top #(
     parameter LFSR_BITS = 5,
-    parameter CLOCK_FREQ = 1000
+    parameter CLOCK_HZ = 1000
 ) (
     input [7:0] io_in,
     output [7:0] io_out
 );
-
-    localparam TICKS_IN_SECOND = CLOCK_FREQ;
 
     // Decompose the input wires
     wire clk = io_in[0];
@@ -23,7 +21,8 @@ module mbikovitsky_top #(
     reg [LFSR_BITS-1:0] taps;
     reg [LFSR_BITS-1:0] lfsr;
 
-    reg [$clog2(CLOCK_FREQ)+1:0] tick_count;
+    localparam TICK_BITS = ($clog2(CLOCK_HZ) == 0) ? 1 : $clog2(CLOCK_HZ);
+    reg [TICK_BITS-1:0] tick_count;
 
     always @(posedge clk) begin
         if (reset_taps) begin
@@ -34,7 +33,7 @@ module mbikovitsky_top #(
             tick_count <= 0;
             lfsr <= data_in;
         end else begin
-            if (tick_count == TICKS_IN_SECOND) begin
+            if (tick_count == CLOCK_HZ - 1) begin
                 tick_count <= 0;
 
                 // Advance the LFSR
