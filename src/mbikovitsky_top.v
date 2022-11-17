@@ -28,9 +28,7 @@ module mbikovitsky_top #(
     always @(posedge clk) begin
         if (reset_taps) begin
             taps <= data_in;
-        end
-
-        if (reset_lfsr) begin
+        end else if (reset_lfsr) begin
             tick_count <= 0;
             lfsr <= data_in;
         end else begin
