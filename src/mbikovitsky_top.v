@@ -13,8 +13,8 @@ module mbikovitsky_top #(
     wire [LFSR_BITS-1:0] data_in = io_in[3+LFSR_BITS-1:3];
 
     seven_segment seven_segment (
-        .value(lfsr_out),
-        .segments(io_out)
+        .value_i(lfsr_out),
+        .segments_o(io_out)
     );
 
     wire [LFSR_BITS-1:0] lfsr_out;

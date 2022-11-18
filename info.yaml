@@ -38,11 +38,11 @@ documentation:
     - data_in4
     - data_in5
   outputs:
-    - data_out1
-    - data_out2
-    - data_out3
-    - data_out4
-    - data_out5
-    - data_out6
-    - data_out7
-    - data_out8
+    - segment a
+    - segment b
+    - segment c
+    - segment d
+    - segment e
+    - segment f
+    - segment g
+    - segment p
