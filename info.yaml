@@ -3,6 +3,7 @@ project:
   wokwi_id: 0
   source_files:
     - mbikovitsky_top.v
+    - lfsr.v
     - seven_segment.v
   top_module:  "mbikovitsky_top"
 
