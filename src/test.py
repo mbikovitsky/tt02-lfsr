@@ -8,7 +8,7 @@ from cocotb.triggers import ClockCycles, Timer
 from galois import GF2, GLFSR
 
 LFSR_BITS = 5
-PRODUCTION_CLOCK_HZ = 1000  # Clock frequency in the production design
+PRODUCTION_CLOCK_HZ = 6250  # Clock frequency in the production design
 
 
 # https://en.wikipedia.org/wiki/Seven-segment_display#Hexadecimal

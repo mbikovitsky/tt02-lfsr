@@ -1,5 +1,5 @@
 module mbikovitsky_top #(
-    parameter CLOCK_HZ = 1000
+    parameter CLOCK_HZ = 6250
 ) (
     input [7:0] io_in,
     output [7:0] io_out
