@@ -3,9 +3,13 @@
 
 module tb (
     input clk,
-    input reset_lfsr,
-    input reset_taps,
-    input [4:0] data_in,
+    input data_in_0,
+    input data_in_1,
+    input data_in_2,
+    input data_in_3,
+    input data_in_4,
+    input data_in_5,
+    input data_in_6,
     output [7:0] data_out
 );
 
@@ -20,7 +24,7 @@ module tb (
     #(.CLOCK_HZ(`CLOCK_HZ))
 `endif
     mbikovitsky_top (
-        .io_in ({data_in, reset_taps, reset_lfsr, clk}),
+        .io_in ({data_in_6, data_in_5, data_in_4, data_in_3, data_in_2, data_in_1, data_in_0, clk}),
         .io_out (data_out)
     );
 

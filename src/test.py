@@ -1,8 +1,9 @@
 import random
-from typing import List
+from typing import Iterable, List
 
 import cocotb
 from cocotb.clock import Clock
+from cocotb.handle import HierarchyObject, ModifiableObject
 from cocotb.triggers import ClockCycles, Timer
 from galois import GF2, GLFSR
 
@@ -31,8 +32,34 @@ SEVEN_SEGMENT_DECODER = {
 }
 
 
+class Bus:
+    def __init__(self, wires: Iterable[ModifiableObject]):
+        self._wires = list(wires)
+        self._total_bits = sum(wire.value.n_bits for wire in self._wires)
+
+    @property
+    def value(self) -> int:
+        for wire in self._wires:
+            if not wire.value.is_resolvable:
+                raise ValueError(f"Wire {wire._path} is not resolvable ({wire.value})")
+
+        return int("".join(wire.value.binstr for wire in reversed(self._wires)), 2)
+
+    @value.setter
+    def value(self, value: int):
+        if value < 0:
+            raise NotImplementedError("Negative values are not supported")
+        if value >= (1 << self._total_bits):
+            raise ValueError(f"{value} is out of range for this bus")
+
+        bit_offset = 0
+        for wire in self._wires:
+            wire.value = (value >> bit_offset) & ((1 << wire.value.n_bits) - 1)
+            bit_offset += wire.value.n_bits
+
+
 @cocotb.test()
-async def test_maximal_length(dut):
+async def test_maximal_length(dut: HierarchyObject):
     # https://users.ece.cmu.edu/~koopman/lfsr/5.txt
     taps = random.choice([0x12, 0x14, 0x17, 0x1B, 0x1D, 0x1E])
 
@@ -41,17 +68,17 @@ async def test_maximal_length(dut):
 
 
 @cocotb.test()
-async def test_random_taps(dut):
+async def test_random_taps(dut: HierarchyObject):
     await _test_lfsr(dut, _random_initial_state(), _random_taps())
 
 
 @cocotb.test()
-async def test_zero_initial_state(dut):
+async def test_zero_initial_state(dut: HierarchyObject):
     encountered = await _test_lfsr(dut, 0, _random_taps())
     assert encountered == {0}
 
 
-async def _test_lfsr(dut, initial_state: int, taps: int):
+async def _test_lfsr(dut: HierarchyObject, initial_state: int, taps: int):
     """
     Exercises the DUT with the given initial state and taps.
 
@@ -60,7 +87,7 @@ async def _test_lfsr(dut, initial_state: int, taps: int):
     """
 
     clock_hz = int(cocotb.plusargs.get("SIM_CLOCK_HZ", PRODUCTION_CLOCK_HZ))
-    clock_period_ns = round((1 / clock_hz) * 1e9)
+    clock_period_ns = round(1e9 / clock_hz)
 
     clock = Clock(dut.clk, clock_period_ns, units="ns")
     cocotb.start_soon(clock.start())
@@ -70,15 +97,23 @@ async def _test_lfsr(dut, initial_state: int, taps: int):
         state=_bits_list(initial_state, LFSR_BITS),
     )
 
-    dut.data_in.value = taps
-    dut.reset_taps.value = 1
-    await ClockCycles(dut.clk, 10)
-    dut.reset_taps.value = 0
+    reset_lfsr = dut.data_in_0
+    reset_taps = dut.data_in_1
+    data_in = Bus(
+        [dut.data_in_2, dut.data_in_3, dut.data_in_4, dut.data_in_5, dut.data_in_6]
+    )
 
-    dut.data_in.value = initial_state
-    dut.reset_lfsr.value = 1
+    reset_taps.value = 1
+    data_in.value = taps
     await ClockCycles(dut.clk, 10)
-    dut.reset_lfsr.value = 0
+    assert data_in.value == taps
+    reset_taps.value = 0
+
+    reset_lfsr.value = 1
+    data_in.value = initial_state
+    await ClockCycles(dut.clk, 10)
+    assert data_in.value == initial_state
+    reset_lfsr.value = 0
 
     encountered = set()
 
