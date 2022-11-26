@@ -25,3 +25,4 @@ test_uart_loopback = "make -C ./src -f Makefile_uart clean sim TESTCASE=test_loo
 test_ram = "make -C ./src -f Makefile_ram clean sim"
 test_ram_full = "env WORDS=65536 WORD_WIDTH=16 make -C ./src -f Makefile_ram clean sim"
 test_alu = "make -C ./src -f Makefile_extend_alu clean sim"
+test_cpu = "make -C ./src -f Makefile_cpu clean sim"
