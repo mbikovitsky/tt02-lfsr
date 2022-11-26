@@ -1,0 +1,22 @@
+SIM ?= icarus
+TOPLEVEL_LANG ?= verilog
+
+VERILOG_SOURCES +=				\
+	$(PWD)/ram_tb.v			\
+	$(PWD)/ram.v
+
+TOPLEVEL = ram_tb
+
+MODULE = test_ram
+
+ifdef WORDS
+COMPILE_ARGS += -DWORDS=${WORDS}
+PLUSARGS += +WORDS=${WORDS}
+endif
+
+ifdef WORD_WIDTH
+COMPILE_ARGS += -DWORD_WIDTH=${WORD_WIDTH}
+PLUSARGS += +WORD_WIDTH=${WORD_WIDTH}
+endif
+
+include $(shell cocotb-config --makefiles)/Makefile.sim
