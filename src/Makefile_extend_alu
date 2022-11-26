@@ -1,0 +1,13 @@
+SIM ?= icarus
+TOPLEVEL_LANG ?= verilog
+
+VERILOG_SOURCES +=				\
+	$(PWD)/extend_alu_tb.v		\
+	$(PWD)/alu.v				\
+	$(PWD)/extend_alu.v
+
+TOPLEVEL = extend_alu_tb
+
+MODULE = test_extend_alu
+
+include $(shell cocotb-config --makefiles)/Makefile.sim
