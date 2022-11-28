@@ -152,6 +152,42 @@ async def test_upload_program(dut: HierarchyObject):
 
 
 @cocotb.test()
+async def test_io_in(dut: HierarchyObject):
+    _start_clock(dut)
+
+    _enter_cpu_mode(dut)
+
+    user_bit_6 = random.randint(0, 1)
+    user_bit_7 = random.randint(0, 1)
+
+    dut.data_in_5.value = user_bit_6
+    dut.data_in_6.value = user_bit_7
+
+    # Read io_in and put it in io_out
+    program = [
+        AInstruction(address=0x4000),  # @0x4000
+        CInstruction(dest=DestSpec.D, a=1, comp=0b110000),  # D=M
+        AInstruction(address=0x4001),  # @0x4001
+        CInstruction(dest=DestSpec.M, a=0, comp=0b001100),  # M=D
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) + 1)
+
+    assert dut.data_out.value.integer == (
+        # Clock is low (probably something to do with when the input is sampled)
+        # LFSR and taps reset are high (CPU mode)
+        # CPU and memory reset are low
+        # UART RX is high (stop bit, as we just finished uploading a program)
+        # Highest two bits we set above
+        0b00100110
+        | (user_bit_6 << 6)
+        | (user_bit_7 << 7)
+    )
+
+
+@cocotb.test()
 async def test_io_out(dut: HierarchyObject):
     _start_clock(dut)
 
