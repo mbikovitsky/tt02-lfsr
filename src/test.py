@@ -196,9 +196,14 @@ async def test_io_out(dut: HierarchyObject):
     value = random.randint(0x0000, 0x7FFF)
 
     program = [
+        # Write our value to io_out
         AInstruction(address=value),  # @value
         CInstruction(dest=DestSpec.D, a=0, comp=0b110000),  # D=A
         AInstruction(address=0x4001),  # @0x4001
+        CInstruction(dest=DestSpec.M, a=0, comp=0b001100),  # M=D
+        # Read it back and put it in memory location 0
+        CInstruction(dest=DestSpec.D, a=1, comp=0b110000),  # D=M
+        AInstruction(address=0),  # @0
         CInstruction(dest=DestSpec.M, a=0, comp=0b001100),  # M=D
     ]
 
@@ -208,6 +213,9 @@ async def test_io_out(dut: HierarchyObject):
 
     # Only the lower 8 bits are actually output
     assert dut.data_out.value.integer == (value & 0xFF)
+
+    # Check that we can read from io_out, as well
+    assert dut.mbikovitsky_top.ram.memory.value[0].integer == (value & 0xFF)
 
 
 def _enter_cpu_mode(dut: HierarchyObject):
@@ -260,8 +268,11 @@ async def _upload_program(
 
 
 async def _run_cpu(dut: HierarchyObject, cycles: int):
-    # Release CPU reset
     cpu_reset = dut.data_in_2
+
+    # Reset the CPU
+    cpu_reset.value = 1
+    await ClockCycles(dut.clk, 2)
     cpu_reset.value = 0
 
     # Run the CPU for some clocks
