@@ -17,9 +17,7 @@ isort = "*"
 python_version = "3.8"
 
 [scripts]
-test = "env CLOCK_HZ=1 SIM_CLOCK_HZ=1 make -C ./src clean sim"
-test_full = "make -C ./src clean sim"
-test_slow = "env SIM_CLOCK_HZ=969 make -C ./src clean sim"
+test = "env make -C ./src clean sim"
 test_uart = "make -C ./src -f Makefile_uart clean sim"
 test_uart_loopback = "make -C ./src -f Makefile_uart clean sim TESTCASE=test_loopback"
 test_ram = "make -C ./src -f Makefile_ram clean sim"

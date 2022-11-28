@@ -1,14 +1,14 @@
 import random
-from typing import Iterable, List
+from typing import Iterable, List, Sequence
 
 import cocotb
-from cocotb.clock import Clock
 from cocotb.handle import HierarchyObject, ModifiableObject
 from cocotb.triggers import ClockCycles, Timer
 from galois import GF2, GLFSR
 
+import util
+
 LFSR_BITS = 5
-PRODUCTION_CLOCK_HZ = 6250  # Clock frequency in the production design
 
 
 # https://en.wikipedia.org/wiki/Seven-segment_display#Hexadecimal
@@ -78,6 +78,66 @@ async def test_zero_initial_state(dut: HierarchyObject):
     assert encountered == {0}
 
 
+@cocotb.test()
+async def test_upload_program(dut: HierarchyObject):
+    _start_clock(dut)
+
+    _enter_cpu_mode(dut)
+
+    program = [
+        random.randint(0x0000, 0xFFFF)
+        for _ in range(len(dut.mbikovitsky_top.prom.memory))
+    ]
+
+    await _upload_program(dut, program)
+
+
+def _enter_cpu_mode(dut: HierarchyObject):
+    """
+    Puts the DUT into "CPU mode".
+    """
+
+    reset_lfsr = dut.data_in_0
+    reset_taps = dut.data_in_1
+    reset_lfsr.value = reset_taps.value = 1
+
+
+async def _upload_program(dut: HierarchyObject, program: Sequence[int]):
+    """
+    Uploads a program to the CPU PROM via UART.
+
+    After this function returns, the CPU is in reset and the PROM contains
+    the program.
+    """
+
+    assert len(program) <= len(dut.mbikovitsky_top.prom.memory)
+
+    program_bytes = b"".join(
+        instruction.to_bytes(2, byteorder="little", signed=False)
+        for instruction in program
+    )
+
+    cpu_reset = dut.data_in_2
+    mem_reset = dut.data_in_3
+    uart_rx = dut.data_in_4
+
+    # Put the CPU in reset while we're updating the PROM
+    cpu_reset.value = 1
+
+    # Reset the memory
+    mem_reset.value = 1
+    await ClockCycles(dut.clk, 10)
+    mem_reset.value = 0
+
+    await util.uart_send(uart_rx, dut.mbikovitsky_top.BAUD.value, program_bytes)
+
+    # Wait for last write to propagate
+    await ClockCycles(dut.clk, 2)
+
+    for value, expected in zip(dut.mbikovitsky_top.prom.memory.value, program):
+        assert value.integer == expected
+
+
 async def _test_lfsr(dut: HierarchyObject, initial_state: int, taps: int):
     """
     Exercises the DUT with the given initial state and taps.
@@ -86,11 +146,7 @@ async def _test_lfsr(dut: HierarchyObject, initial_state: int, taps: int):
     encountered outputs.
     """
 
-    clock_hz = int(cocotb.plusargs.get("SIM_CLOCK_HZ", PRODUCTION_CLOCK_HZ))
-    clock_period_ns = round(1e9 / clock_hz)
-
-    clock = Clock(dut.clk, clock_period_ns, units="ns")
-    cocotb.start_soon(clock.start())
+    _start_clock(dut)
 
     lfsr_reference = GLFSR.Taps(
         taps=GF2(_bits_list(taps, LFSR_BITS)),
@@ -131,6 +187,13 @@ async def _test_lfsr(dut: HierarchyObject, initial_state: int, taps: int):
         lfsr_reference.step()
 
     return encountered
+
+
+def _start_clock(dut: HierarchyObject):
+    clock_hz = int(
+        cocotb.plusargs.get("SIM_CLOCK_HZ", dut.mbikovitsky_top.CLOCK_HZ.value)
+    )
+    util.start_clock(dut, clock_hz)
 
 
 def _random_initial_state() -> int:
