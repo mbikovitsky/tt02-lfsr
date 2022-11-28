@@ -5,7 +5,12 @@ VERILOG_SOURCES +=				\
 	$(PWD)/tb.v					\
 	$(PWD)/mbikovitsky_top.v	\
 	$(PWD)/lfsr.v				\
-	$(PWD)/seven_segment.v
+	$(PWD)/seven_segment.v		\
+	$(PWD)/uart.v				\
+	$(PWD)/ram.v				\
+	$(PWD)/alu.v				\
+	$(PWD)/extend_alu.v			\
+	$(PWD)/cpu.v
 
 TOPLEVEL = tb
 

@@ -1,5 +1,8 @@
 module mbikovitsky_top #(
-    parameter CLOCK_HZ = 6250
+    parameter CLOCK_HZ = 6250,
+    parameter BAUD = 781,
+    parameter ROM_WORDS = 64, // Must be a power of 2
+    parameter RAM_WORDS = 16  // Must be a power of 2
 ) (
     input [7:0] io_in,
     output [7:0] io_out
@@ -7,14 +10,27 @@ module mbikovitsky_top #(
 
     localparam LFSR_BITS = 5;
 
+    generate
+        if (ROM_WORDS < 2)
+            _ERROR_ROM_SIZE_MUST_BE_AT_LEAST_2_ error();
+        if ((ROM_WORDS & (ROM_WORDS - 1)) != 0)
+            _ERROR_ROM_SIZE_MUST_BE_A_POWER_OF_2_ error();
+
+        if (RAM_WORDS < 2)
+            _ERROR_RAM_SIZE_MUST_BE_AT_LEAST_2_ error();
+        if ((RAM_WORDS & (RAM_WORDS - 1)) != 0)
+            _ERROR_RAM_SIZE_MUST_BE_A_POWER_OF_2_ error();
+    endgenerate
+
     wire clk = io_in[0];
 
     wire mode_cpu = reset_lfsr & reset_taps;
 
-    // TODO: Assign CPU output
-    assign io_out = mode_cpu ? 0 : segments;
+    assign io_out = mode_cpu ? cpu_io_out : segments;
 
+    //
     // LFSR
+    //
 
     wire reset_lfsr = io_in[1];
     wire reset_taps = io_in[2];
@@ -41,8 +57,155 @@ module mbikovitsky_top #(
         .state_o(lfsr_out)
     );
 
+    //
     // CPU
+    //
 
-    // TODO
+    wire cpu_reset  = (!mode_cpu) || (mode_cpu && io_in[3]);
+    wire mem_reset  = (!mode_cpu) || (mode_cpu && io_in[4]);
+    wire uart_reset = (!mode_cpu) || (mode_cpu && (!io_in[3] || io_in[4]));
+    wire uart_rx    = io_in[5];
+
+    CPU cpu (
+        .clk(clk),
+        .reset(cpu_reset),
+        .instruction(instruction),
+        .next_instruction_addr_o(next_instruction_addr),
+        .memory_addr_o(memory_addr),
+        .memory_we_o(memory_we),
+        .memory_i(cpu_memory_in),
+        .memory_o(cpu_memory_out)
+    );
+
+    wire [15:0] instruction;
+    wire [14:0] next_instruction_addr;
+
+    wire [14:0] memory_addr;
+    wire        memory_we;
+    reg  [15:0] cpu_memory_in;
+    wire [15:0] cpu_memory_out;
+
+    // Address map (in 16-bit words)
+    // ---
+    // 0            -   RAM_WORDS-1     - RAM
+    // RAM_WORDS    -   0x3FFF          - A20 :)
+    // 0x4000       -   0x4000          - io_in (high 8 bits are always 0 on read)
+    // 0x4001       -   0x4001          - io_out (high 8 bits are ignored on write,
+    //                                            0 on read)
+
+    wire is_ram_address = !memory_addr[14];
+    wire is_io_in_address = (!is_ram_address) && (memory_addr[0] == 0);
+    wire is_io_out_address = (!is_ram_address) && (memory_addr[0] == 1);
+
+    // Route memory reads
+    always @(*) begin
+        if (is_ram_address) begin
+            cpu_memory_in = ram_data_out;
+        end else if (is_io_in_address) begin
+            cpu_memory_in = {'0, io_in};
+        end else if (is_io_out_address) begin
+            cpu_memory_in = {'0, cpu_io_out};
+        end else begin
+            // Reads from any other address return 0xFF
+            cpu_memory_in = '1;
+        end
+    end
+
+    // I/O output
+    reg [7:0] cpu_io_out;
+    always @(posedge clk) begin
+        if (mem_reset) begin
+            cpu_io_out <= 0;
+        end else begin
+            if (memory_we && is_io_out_address) begin
+                cpu_io_out <= cpu_memory_out[7:0];
+            end
+        end
+    end
+
+    wire [15:0] ram_data_out;
+
+    RAM #(
+        .WORDS(RAM_WORDS),
+        .WORD_WIDTH(16)
+    ) ram (
+        .clk(clk),
+        .reset(mem_reset),
+        .address_i(memory_addr[$clog2(RAM_WORDS)-1:0]),
+        .wr_en_i(is_ram_address ? memory_we : 1'b0),
+        .data_i(cpu_memory_out),
+        .data_o(ram_data_out)
+    );
+
+    RAM #(
+        .WORDS(ROM_WORDS),
+        .WORD_WIDTH(16)
+    ) prom (
+        .clk(clk),
+        .reset(mem_reset),
+        .address_i(prom_addr),
+        .wr_en_i(prom_we),
+        .data_i(uart_received_word),
+        .data_o(instruction)
+    );
+
+    wire [$clog2(ROM_WORDS)-1:0]    prom_addr   = cpu_reset ? uart_write_address : next_instruction_addr[$clog2(ROM_WORDS)-1:0];
+    wire                            prom_we     = (uart_state == UART_FLUSH);
+
+    // UART to fill the PROM
+
+    UART #(
+        .CLOCK_HZ(CLOCK_HZ),
+        .BAUD(BAUD)
+    ) uart(
+        .reset(uart_reset),
+        .clk(clk),
+        .rx_i(uart_rx),
+        .rx_data_o(rx_data),
+        .rx_ready_o(rx_ready),
+        .rx_ack_i(1'b1)
+    );
+
+    wire [7:0] rx_data;
+    wire       rx_ready;
+
+    reg [$clog2(ROM_WORDS)-1:0] uart_write_address;
+    reg [15:0]                  uart_received_word;
+    reg [1:0]                   uart_state;
+
+    localparam  UART_RECEIVE_LOW    = 2'd0,
+                UART_RECEIVE_HIGH   = 2'd1,
+                UART_FLUSH          = 2'd2;
+
+    always @(posedge clk) begin
+        if (uart_reset) begin
+            uart_write_address <= 0;
+            uart_received_word <= 0;
+            uart_state <= UART_RECEIVE_LOW;
+        end else begin
+            case (uart_state)
+                UART_RECEIVE_LOW: begin
+                    if (rx_ready) begin
+                        uart_received_word[7:0] <= rx_data;
+                        uart_state <= UART_RECEIVE_HIGH;
+                    end
+                end
+                UART_RECEIVE_HIGH: begin
+                    if (rx_ready) begin
+                        uart_received_word[15:8] <= rx_data;
+                        uart_state <= UART_FLUSH;
+                    end
+                end
+                UART_FLUSH: begin
+                    if (uart_write_address == ROM_WORDS - 1) begin
+                        uart_write_address <= 0;
+                    end else begin
+                        uart_write_address <= uart_write_address + 1;
+                    end
+                    uart_state <= UART_RECEIVE_LOW;
+                end
+            endcase
+        end
+    end
 
 endmodule

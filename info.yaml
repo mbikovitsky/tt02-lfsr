@@ -5,6 +5,11 @@ project:
     - mbikovitsky_top.v
     - lfsr.v
     - seven_segment.v
+    - uart.v
+    - ram.v
+    - alu.v
+    - extend_alu.v
+    - cpu.v
   top_module:  "mbikovitsky_top"
 
 documentation:
