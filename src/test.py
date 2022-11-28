@@ -1,5 +1,7 @@
+import ctypes
 import random
-from typing import Iterable, List, Sequence
+from enum import IntEnum, IntFlag
+from typing import Iterable, List, Union
 
 import cocotb
 from cocotb.handle import HierarchyObject, ModifiableObject
@@ -58,6 +60,63 @@ class Bus:
             bit_offset += wire.value.n_bits
 
 
+class AInstruction(ctypes.Union):
+    class _Bits(ctypes.LittleEndianStructure):
+        _fields_ = (
+            ("address", ctypes.c_uint16, 15),
+            ("reserved0_0", ctypes.c_uint16, 1),
+        )
+
+    _anonymous_ = ("u",)
+    _fields_ = (("u", _Bits), ("full", ctypes.c_uint16))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.reserved0_0 = 0b0
+
+    def __int__(self) -> int:
+        return self.full
+
+
+class CInstruction(ctypes.Union):
+    class _Bits(ctypes.LittleEndianStructure):
+        _fields_ = (
+            ("jump", ctypes.c_uint16, 3),
+            ("dest", ctypes.c_uint16, 3),
+            ("comp", ctypes.c_uint16, 6),
+            ("a", ctypes.c_uint16, 1),
+            ("reserved0_1", ctypes.c_uint16, 3),
+        )
+
+    _anonymous_ = ("u",)
+    _fields_ = (("u", _Bits), ("full", ctypes.c_uint16))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.reserved0_1 = 0b111
+
+    def __int__(self) -> int:
+        return self.full
+
+
+class JumpSpec(IntEnum):
+    NONE = 0b000
+    JGT = 0b001
+    JEQ = 0b010
+    JGE = 0b011
+    JLT = 0b100
+    JNE = 0b101
+    JLE = 0b110
+    JMP = 0b111
+
+
+class DestSpec(IntFlag):
+    NONE = 0b000
+    A = 0b100
+    D = 0b010
+    M = 0b001
+
+
 @cocotb.test()
 async def test_maximal_length(dut: HierarchyObject):
     # https://users.ece.cmu.edu/~koopman/lfsr/5.txt
@@ -92,6 +151,29 @@ async def test_upload_program(dut: HierarchyObject):
     await _upload_program(dut, program)
 
 
+@cocotb.test()
+async def test_io_out(dut: HierarchyObject):
+    _start_clock(dut)
+
+    _enter_cpu_mode(dut)
+
+    value = random.randint(0x0000, 0x7FFF)
+
+    program = [
+        AInstruction(address=value),  # @value
+        CInstruction(dest=DestSpec.D, a=0, comp=0b110000),  # D=A
+        AInstruction(address=0x4001),  # @0x4001
+        CInstruction(dest=DestSpec.M, a=0, comp=0b001100),  # M=D
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) + 1)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == (value & 0xFF)
+
+
 def _enter_cpu_mode(dut: HierarchyObject):
     """
     Puts the DUT into "CPU mode".
@@ -102,7 +184,9 @@ def _enter_cpu_mode(dut: HierarchyObject):
     reset_lfsr.value = reset_taps.value = 1
 
 
-async def _upload_program(dut: HierarchyObject, program: Sequence[int]):
+async def _upload_program(
+    dut: HierarchyObject, program: Iterable[Union[int, AInstruction, CInstruction]]
+):
     """
     Uploads a program to the CPU PROM via UART.
 
@@ -110,6 +194,7 @@ async def _upload_program(dut: HierarchyObject, program: Sequence[int]):
     the program.
     """
 
+    program = [int(instruction) for instruction in program]
     assert len(program) <= len(dut.mbikovitsky_top.prom.memory)
 
     program_bytes = b"".join(
@@ -136,6 +221,15 @@ async def _upload_program(dut: HierarchyObject, program: Sequence[int]):
 
     for value, expected in zip(dut.mbikovitsky_top.prom.memory.value, program):
         assert value.integer == expected
+
+
+async def _run_cpu(dut: HierarchyObject, cycles: int):
+    # Release CPU reset
+    cpu_reset = dut.data_in_2
+    cpu_reset.value = 0
+
+    # Run the CPU for some clocks
+    await ClockCycles(dut.clk, cycles)
 
 
 async def _test_lfsr(dut: HierarchyObject, initial_state: int, taps: int):
