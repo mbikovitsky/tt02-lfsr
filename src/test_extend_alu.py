@@ -393,7 +393,7 @@ async def test_shr_y(dut: HierarchyObject):
     )
 
 
-@cocotb.test()
+@cocotb.test(skip=True)
 async def test_mul(dut: HierarchyObject):
     x = _random_value()
     y = _random_value()

@@ -24,11 +24,12 @@ module ExtendALU (
     // Otherwise, the lower bit takes precedence, 0 meaning the multiplication
     // result should be returned. If it is not 0, we return the shift
     // result.
+    // UPDATE: Multiplication disabled
     reg signed [15:0] result;
     always @(*) begin
         case (instruction[8:7])
             2'b00:
-                result = x * y;
+                result = 0;
             2'b01:
                 case (instruction[5:4])
                     2'b00:
@@ -41,7 +42,7 @@ module ExtendALU (
                         result = x <<< 1;
                 endcase
             2'b10:
-                result = x * y;
+                result = 0;
             2'b11:
                 result = simple_alu_result;
         endcase

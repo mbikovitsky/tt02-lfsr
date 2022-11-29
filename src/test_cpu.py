@@ -330,7 +330,7 @@ async def test_sort(dut: HierarchyObject):
     assert output_array == sorted(to_sort, reverse=True)
 
 
-@cocotb.test()
+@cocotb.test(skip=True)
 async def test_builtin_mul(dut: HierarchyObject):
     program = [
         0b0000000000111001,  # @57
