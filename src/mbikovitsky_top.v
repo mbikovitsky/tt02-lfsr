@@ -1,7 +1,7 @@
 module mbikovitsky_top #(
     parameter CLOCK_HZ = 6250,
     parameter BAUD = 781,
-    parameter ROM_WORDS = 64, // Must be a power of 2
+    parameter ROM_WORDS = 42,
     parameter RAM_WORDS = 2  // Must be a power of 2
 ) (
     input [7:0] io_in,
@@ -11,11 +11,6 @@ module mbikovitsky_top #(
     localparam LFSR_BITS = 5;
 
     generate
-        if (ROM_WORDS < 2)
-            _ERROR_ROM_SIZE_MUST_BE_AT_LEAST_2_ error();
-        if ((ROM_WORDS & (ROM_WORDS - 1)) != 0)
-            _ERROR_ROM_SIZE_MUST_BE_A_POWER_OF_2_ error();
-
         if (RAM_WORDS < 2)
             _ERROR_RAM_SIZE_MUST_BE_AT_LEAST_2_ error();
         if ((RAM_WORDS & (RAM_WORDS - 1)) != 0)
