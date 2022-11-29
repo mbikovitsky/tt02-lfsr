@@ -2,7 +2,7 @@ module mbikovitsky_top #(
     parameter CLOCK_HZ = 6250,
     parameter BAUD = 781,
     parameter ROM_WORDS = 64, // Must be a power of 2
-    parameter RAM_WORDS = 16  // Must be a power of 2
+    parameter RAM_WORDS = 2  // Must be a power of 2
 ) (
     input [7:0] io_in,
     output [7:0] io_out
