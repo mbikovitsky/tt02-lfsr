@@ -1,11 +1,12 @@
 import ctypes
+import os.path
 import random
 from enum import IntEnum, IntFlag
 from typing import Iterable, List, Union
 
 import cocotb
 from cocotb.handle import HierarchyObject, ModifiableObject
-from cocotb.triggers import ClockCycles, Timer
+from cocotb.triggers import ClockCycles, Edge, Timer, with_timeout
 from galois import GF2, GLFSR
 
 import util
@@ -216,6 +217,70 @@ async def test_io_out(dut: HierarchyObject):
 
     # Check that we can read from io_out, as well
     assert dut.mbikovitsky_top.ram.memory.value[0].integer == (value & 0xFF)
+
+
+@cocotb.test()
+async def test_lfsr_program(dut: HierarchyObject):
+    _start_clock(dut)
+
+    _enter_cpu_mode(dut)
+
+    with open(
+        os.path.join(os.path.dirname(__file__), "lfsr.hack"), mode="r", encoding="ASCII"
+    ) as f:
+        program = [int(line, 2) for line in f]
+
+    await _upload_program(dut, program)
+
+    cpu_reset = dut.data_in_2
+
+    # Reset the CPU
+    cpu_reset.value = 1
+    await ClockCycles(dut.clk, 2)
+    cpu_reset.value = 0
+
+    async def collect_outputs():
+        outputs = {}
+
+        # The first value is just the initial state
+        need_xor = False
+
+        while True:
+            # Wait for next value
+            await Edge(dut.data_out)
+
+            # If the next value requires XORing with the taps,
+            # wait for that to happen
+            if need_xor:
+                await Edge(dut.data_out)
+
+            value = dut.data_out.value.integer
+
+            # Found a cycle
+            if value in outputs:
+                return list(outputs.keys())
+
+            outputs[value] = None
+
+            need_xor = bool(value & 1)
+
+    # Wait for all outputs. The LFSR updates once a second approximately,
+    # so give it some wiggle room
+    outputs = await with_timeout(collect_outputs(), 260, "sec")
+
+    lfsr_reference = GLFSR.Taps(
+        taps=GF2(_bits_list(0x8E, 8)),
+        state=_bits_list(1, 8),
+    )
+
+    expected_outputs = []
+    for _ in range(len(outputs)):
+        expected_outputs.append(
+            int("".join(str(int(x)) for x in lfsr_reference.state), 2)
+        )
+        lfsr_reference.step()
+
+    assert outputs == expected_outputs
 
 
 def _enter_cpu_mode(dut: HierarchyObject):
