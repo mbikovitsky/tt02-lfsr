@@ -145,8 +145,7 @@ async def test_upload_program(dut: HierarchyObject):
     _enter_cpu_mode(dut)
 
     program = [
-        random.randint(0x0000, 0xFFFF)
-        for _ in range(len(dut.mbikovitsky_top.prom.memory))
+        random.randint(0x0000, 0xFFFF) for _ in range(len(dut.mbikovitsky_top.prom))
     ]
 
     await _upload_program(dut, program)
@@ -304,7 +303,7 @@ async def _upload_program(
     """
 
     program = [int(instruction) for instruction in program]
-    assert len(program) <= len(dut.mbikovitsky_top.prom.memory)
+    assert len(program) <= len(dut.mbikovitsky_top.prom)
 
     program_bytes = b"".join(
         instruction.to_bytes(2, byteorder="little", signed=False)
@@ -328,7 +327,7 @@ async def _upload_program(
     # Wait for last write to propagate
     await ClockCycles(dut.clk, 2)
 
-    for value, expected in zip(dut.mbikovitsky_top.prom.memory.value, program):
+    for value, expected in zip(dut.mbikovitsky_top.prom.value, program):
         assert value.integer == expected
 
 

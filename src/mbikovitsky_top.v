@@ -120,6 +120,8 @@ module mbikovitsky_top #(
 
     wire [15:0] ram_data_out;
 
+    // RAM
+
     RAM #(
         .WORDS(RAM_WORDS),
         .WORD_WIDTH(16)
@@ -132,20 +134,11 @@ module mbikovitsky_top #(
         .data_o(ram_data_out)
     );
 
-    RAM #(
-        .WORDS(ROM_WORDS),
-        .WORD_WIDTH(16)
-    ) prom (
-        .clk(clk),
-        .reset(mem_reset),
-        .address_i(prom_addr),
-        .wr_en_i(prom_we),
-        .data_i(uart_received_word),
-        .data_o(instruction)
-    );
+    // PROM
 
-    wire [$clog2(ROM_WORDS)-1:0]    prom_addr   = cpu_reset ? uart_write_address : next_instruction_addr[$clog2(ROM_WORDS)-1:0];
-    wire                            prom_we     = (uart_state == UART_FLUSH);
+    reg [16-1:0] prom [ROM_WORDS];
+
+    assign instruction = prom[next_instruction_addr[$clog2(ROM_WORDS)-1:0]];
 
     // UART to fill the PROM
 
@@ -165,39 +158,34 @@ module mbikovitsky_top #(
     wire       rx_ready;
 
     reg [$clog2(ROM_WORDS)-1:0] uart_write_address;
-    reg [15:0]                  uart_received_word;
-    reg [1:0]                   uart_state;
+    reg [0:0]                   uart_state;
 
     localparam  UART_RECEIVE_LOW    = 2'd0,
-                UART_RECEIVE_HIGH   = 2'd1,
-                UART_FLUSH          = 2'd2;
+                UART_RECEIVE_HIGH   = 2'd1;
 
     always @(posedge clk) begin
         if (uart_reset) begin
             uart_write_address <= 0;
-            uart_received_word <= 0;
             uart_state <= UART_RECEIVE_LOW;
         end else begin
             case (uart_state)
                 UART_RECEIVE_LOW: begin
                     if (rx_ready) begin
-                        uart_received_word[7:0] <= rx_data;
+                        prom[uart_write_address][7:0] <= rx_data;
                         uart_state <= UART_RECEIVE_HIGH;
                     end
                 end
                 UART_RECEIVE_HIGH: begin
                     if (rx_ready) begin
-                        uart_received_word[15:8] <= rx_data;
-                        uart_state <= UART_FLUSH;
+                        prom[uart_write_address][15:8] <= rx_data;
+                        uart_state <= UART_RECEIVE_LOW;
+
+                        if (uart_write_address == ROM_WORDS - 1) begin
+                            uart_write_address <= 0;
+                        end else begin
+                            uart_write_address <= uart_write_address + 1;
+                        end
                     end
-                end
-                UART_FLUSH: begin
-                    if (uart_write_address == ROM_WORDS - 1) begin
-                        uart_write_address <= 0;
-                    end else begin
-                        uart_write_address <= uart_write_address + 1;
-                    end
-                    uart_state <= UART_RECEIVE_LOW;
                 end
             endcase
         end
