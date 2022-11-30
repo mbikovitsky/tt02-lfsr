@@ -27,25 +27,20 @@ module ExtendALU (
     // UPDATE: Multiplication disabled
     reg signed [15:0] result;
     always @(*) begin
-        case (instruction[8:7])
-            2'b00:
-                result = 0;
-            2'b01:
-                case (instruction[5:4])
-                    2'b00:
-                        result = y >>> 1;
-                    2'b01:
-                        result = x >>> 1;
-                    2'b10:
-                        result = y <<< 1;
-                    2'b11:
-                        result = x <<< 1;
-                endcase
-            2'b10:
-                result = 0;
-            2'b11:
-                result = simple_alu_result;
-        endcase
+        if (instruction[8]) begin
+            result = simple_alu_result;
+        end else begin
+            case (instruction[5:4])
+                2'b00:
+                    result = y >>> 1;
+                2'b01:
+                    result = x >>> 1;
+                2'b10:
+                    result = y <<< 1;
+                2'b11:
+                    result = x <<< 1;
+            endcase
+        end
     end
 
     assign out = result;
