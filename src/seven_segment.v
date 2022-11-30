@@ -19,53 +19,35 @@
  *                  Values between 0x10-0x1F are output as hex digits with a dot.
  */
 module seven_segment (
-    input wire [4:0] value_i,
-    output reg [7:0] segments_o
+    input [4:0] value_i,
+    output [7:0] segments_o
 );
 
+    assign segments_o = {value_i[4], segments_low};
+
+    reg [6:0] segments_low;
     always @(*) begin
-        case(value_i)
+        case(value_i[3:0])
             // Hex digits
             // https://en.wikipedia.org/wiki/Seven-segment_display#Hexadecimal
 
-            //                          pgfedcba
-            'h00:       segments_o = 8'b00111111;
-            'h01:       segments_o = 8'b00000110;
-            'h02:       segments_o = 8'b01011011;
-            'h03:       segments_o = 8'b01001111;
-            'h04:       segments_o = 8'b01100110;
-            'h05:       segments_o = 8'b01101101;
-            'h06:       segments_o = 8'b01111101;
-            'h07:       segments_o = 8'b00000111;
-            'h08:       segments_o = 8'b01111111;
-            'h09:       segments_o = 8'b01101111;
-            'h0A:       segments_o = 8'b01110111;
-            'h0B:       segments_o = 8'b01111100;
-            'h0C:       segments_o = 8'b00111001;
-            'h0D:       segments_o = 8'b01011110;
-            'h0E:       segments_o = 8'b01111001;
-            'h0F:       segments_o = 8'b01110001;
-
-            // Hex digits, but with the dot :)
-
-            'h10:       segments_o = 8'b10111111;
-            'h11:       segments_o = 8'b10000110;
-            'h12:       segments_o = 8'b11011011;
-            'h13:       segments_o = 8'b11001111;
-            'h14:       segments_o = 8'b11100110;
-            'h15:       segments_o = 8'b11101101;
-            'h16:       segments_o = 8'b11111101;
-            'h17:       segments_o = 8'b10000111;
-            'h18:       segments_o = 8'b11111111;
-            'h19:       segments_o = 8'b11101111;
-            'h1A:       segments_o = 8'b11110111;
-            'h1B:       segments_o = 8'b11111100;
-            'h1C:       segments_o = 8'b10111001;
-            'h1D:       segments_o = 8'b11011110;
-            'h1E:       segments_o = 8'b11111001;
-            'h1F:       segments_o = 8'b11110001;
-
-            default:    segments_o = 8'b00000000;
+            //                      gfedcba
+            4'h0: segments_low = 7'b0111111;
+            4'h1: segments_low = 7'b0000110;
+            4'h2: segments_low = 7'b1011011;
+            4'h3: segments_low = 7'b1001111;
+            4'h4: segments_low = 7'b1100110;
+            4'h5: segments_low = 7'b1101101;
+            4'h6: segments_low = 7'b1111101;
+            4'h7: segments_low = 7'b0000111;
+            4'h8: segments_low = 7'b1111111;
+            4'h9: segments_low = 7'b1101111;
+            4'hA: segments_low = 7'b1110111;
+            4'hB: segments_low = 7'b1111100;
+            4'hC: segments_low = 7'b0111001;
+            4'hD: segments_low = 7'b1011110;
+            4'hE: segments_low = 7'b1111001;
+            4'hF: segments_low = 7'b1110001;
         endcase
     end
 
