@@ -56,20 +56,20 @@ module CPU (
     // PC register. Input is always the A register, but whether it is actually
     // used is controlled by the ALU output and the jump bits
     // of the instruction.
-    reg [15:0] pc_reg;
+    reg [14:0] pc_reg;
     always @(posedge clk) begin
         if (reset) begin
             pc_reg <= 0;
         end else begin
             if (jump) begin
-                pc_reg <= a_reg;
+                pc_reg <= a_reg[14:0];
             end else begin
                 pc_reg <= pc_reg + 1;
             end
         end
     end
 
-    assign next_instruction_addr_o = pc_reg[14:0];
+    assign next_instruction_addr_o = pc_reg;
 
     // ALU operation. The first input is always the D register,
     // and the second input varies according to the 'a' bit in the instruction.
