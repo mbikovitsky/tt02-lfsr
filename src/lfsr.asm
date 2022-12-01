@@ -36,24 +36,10 @@
     M=0;JMP
 
 (lblXor)
-    // R1 = ~(IO_OUT & Taps)
-    @16385  // IO_OUT
-    D=M
     @142    // Taps - 0x8E
-    D=D&A
-    D=!D
-    @R1
-    M=D
-
-    // IO_OUT = (IO_OUT | Taps) & R1
+    D=A
     @16385  // IO_OUT
-    D=M
-    @142    // Taps - 0x8E
-    D=D|A
-    @R1
-    D=D&M
-    @16385  // IO_OUT
-    M=D
+    @32767  // Replace with M=D^M (1001000000001000)
 
     @lblLoop
     M=0;JMP

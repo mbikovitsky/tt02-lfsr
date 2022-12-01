@@ -330,14 +330,14 @@ async def test_sort(dut: HierarchyObject):
     assert output_array == sorted(to_sort, reverse=True)
 
 
-@cocotb.test(skip=True)
-async def test_builtin_mul(dut: HierarchyObject):
+@cocotb.test()
+async def test_builtin_xor(dut: HierarchyObject):
     program = [
         0b0000000000111001,  # @57
         0b1110110011010000,  # D=-A
         0b0000000000000101,  # @5
         0b1010110000010000,  # D = D<<
-        0b1100000000110000,  # DA = D*A
+        0b1100000000110000,  # DA = D^A
         0b0000000000000000,  # @0
         0b1110001100001000,  # M=D
     ]
@@ -346,7 +346,7 @@ async def test_builtin_mul(dut: HierarchyObject):
 
     memory = await _execute_program(dut, program, cycles=len(program) + 1)
 
-    assert memory[0] == -570
+    assert memory[0] == -117
 
 
 async def _execute_program(

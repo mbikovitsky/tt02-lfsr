@@ -393,15 +393,15 @@ async def test_shr_y(dut: HierarchyObject):
     )
 
 
-@cocotb.test(skip=True)
-async def test_mul(dut: HierarchyObject):
+@cocotb.test()
+async def test_xor(dut: HierarchyObject):
     x = _random_value()
     y = _random_value()
 
     await _test_computation(
         dut,
         ExtendALUInstruction(shift_x=0, shift_left=0, shift=0),
-        expected=ctypes.c_int16(x * y).value,
+        expected=ctypes.c_int16(x ^ y).value,
         x=x,
         y=y,
     )
