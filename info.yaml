@@ -31,7 +31,7 @@ documentation:
   external_hw:  ""
   language:     "verilog"
   doc_link:     ""
-  clock_hz:     6250
+  clock_hz:     625
   picture:      ""
   inputs:
     - clock

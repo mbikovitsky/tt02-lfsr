@@ -10,11 +10,11 @@
 
 (lblLoop)
     // Each instruction takes a cycle, and there are 8 instructions in the
-    // busy loop, so we need 781.25 loops to wait a second, with a clock speed
-    // of 6250 Hz.
+    // busy loop, so we need 78.125 loops to wait a second, with a clock speed
+    // of 625 Hz.
     @R0
     D=M
-    @781
+    @78
     D=D-A
     @lblNext
     D;JEQ

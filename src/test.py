@@ -265,7 +265,7 @@ async def test_lfsr_program(dut: HierarchyObject):
 
     # Wait for all outputs. The LFSR updates once a second approximately,
     # so give it some wiggle room
-    outputs = await with_timeout(collect_outputs(), 260, "sec")
+    outputs = await with_timeout(collect_outputs(), 300, "sec")
 
     lfsr_reference = GLFSR.Taps(
         taps=GF2(_bits_list(0x8E, 8)),

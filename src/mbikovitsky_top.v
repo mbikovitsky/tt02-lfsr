@@ -1,6 +1,6 @@
 module mbikovitsky_top #(
-    parameter CLOCK_HZ = 6250,
-    parameter BAUD = 781,
+    parameter CLOCK_HZ = 625,
+    parameter BAUD = 78,
     parameter ROM_WORDS = 24,
     parameter RAM_WORDS = 2  // Must be a power of 2
 ) (
