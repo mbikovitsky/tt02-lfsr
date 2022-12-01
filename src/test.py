@@ -142,7 +142,7 @@ async def test_zero_initial_state(dut: HierarchyObject):
 async def test_upload_program(dut: HierarchyObject):
     _start_clock(dut)
 
-    _enter_cpu_mode(dut)
+    await _enter_cpu_mode(dut)
 
     program = [
         random.randint(0x0000, 0xFFFF) for _ in range(len(dut.mbikovitsky_top.prom))
@@ -155,12 +155,10 @@ async def test_upload_program(dut: HierarchyObject):
 async def test_io_in(dut: HierarchyObject):
     _start_clock(dut)
 
-    _enter_cpu_mode(dut)
+    await _enter_cpu_mode(dut)
 
-    user_bit_6 = random.randint(0, 1)
     user_bit_7 = random.randint(0, 1)
 
-    dut.data_in_5.value = user_bit_6
     dut.data_in_6.value = user_bit_7
 
     # Read io_in and put it in io_out
@@ -180,9 +178,9 @@ async def test_io_in(dut: HierarchyObject):
         # LFSR and taps reset are high (CPU mode)
         # CPU and memory reset are low
         # UART RX is high (stop bit, as we just finished uploading a program)
-        # Highest two bits we set above
-        0b00100110
-        | (user_bit_6 << 6)
+        # UART reset is high
+        # Highest bit we set above
+        0b01100110
         | (user_bit_7 << 7)
     )
 
@@ -191,7 +189,7 @@ async def test_io_in(dut: HierarchyObject):
 async def test_io_out(dut: HierarchyObject):
     _start_clock(dut)
 
-    _enter_cpu_mode(dut)
+    await _enter_cpu_mode(dut)
 
     value = random.randint(0x0000, 0x7FFF)
 
@@ -215,39 +213,46 @@ async def test_io_out(dut: HierarchyObject):
 
 @cocotb.test()
 async def test_lfsr_program(dut: HierarchyObject):
+    cpu_reset = dut.data_in_2
+    mem_reset = dut.data_in_3
+
     _start_clock(dut)
 
-    _enter_cpu_mode(dut)
+    await _enter_cpu_mode(dut)
+
+    init_program = [
+        AInstruction(address=1),  # Initial state
+        CInstruction(dest=DestSpec.D, a=0, comp=0b110000),  # D=A
+        AInstruction(address=0x4001),  # io_out
+        CInstruction(dest=DestSpec.M, a=0, comp=0b001100),  # M=D
+    ]
+
+    await _upload_program(dut, init_program)
+
+    # Run the initialization
+    cpu_reset.value = 0
+    mem_reset.value = 0
+    await ClockCycles(dut.clk, len(init_program) + 1)
+
+    assert dut.data_out.value.integer == 1
 
     with open(
         os.path.join(os.path.dirname(__file__), "lfsr.hack"), mode="r", encoding="ASCII"
     ) as f:
         program = [int(line, 2) for line in f]
 
+    cpu_reset.value = 1
+
     await _upload_program(dut, program)
 
-    cpu_reset = dut.data_in_2
-
-    # Reset the CPU
-    cpu_reset.value = 1
-    await ClockCycles(dut.clk, 2)
     cpu_reset.value = 0
 
     async def collect_outputs():
         outputs = {}
 
-        # The first value is just the initial state
         need_xor = False
 
         while True:
-            # Wait for next value
-            await Edge(dut.data_out)
-
-            # If the next value requires XORing with the taps,
-            # wait for that to happen
-            if need_xor:
-                await Edge(dut.data_out)
-
             value = dut.data_out.value.integer
 
             # Found a cycle
@@ -257,6 +262,14 @@ async def test_lfsr_program(dut: HierarchyObject):
             outputs[value] = None
 
             need_xor = bool(value & 1)
+
+            # Wait for next value
+            await Edge(dut.data_out)
+
+            # If the next value requires XORing with the taps,
+            # wait for that to happen
+            if need_xor:
+                await Edge(dut.data_out)
 
     # Wait for all outputs.
     outputs = await with_timeout(collect_outputs(), 300, "sec")
@@ -276,14 +289,27 @@ async def test_lfsr_program(dut: HierarchyObject):
     assert outputs == expected_outputs
 
 
-def _enter_cpu_mode(dut: HierarchyObject):
+async def _enter_cpu_mode(dut: HierarchyObject):
     """
     Puts the DUT into "CPU mode".
+
+    CPU and memory are in reset when this function returns.
     """
 
     reset_lfsr = dut.data_in_0
     reset_taps = dut.data_in_1
     reset_lfsr.value = reset_taps.value = 1
+
+    cpu_reset = dut.data_in_2
+    cpu_reset.value = 1
+
+    mem_reset = dut.data_in_3
+    mem_reset.value = 1
+
+    uart_reset = dut.data_in_5
+    uart_reset.value = 1
+
+    await ClockCycles(dut.clk, 2)
 
 
 async def _upload_program(
@@ -292,8 +318,7 @@ async def _upload_program(
     """
     Uploads a program to the CPU PROM via UART.
 
-    After this function returns, the CPU is in reset and the PROM contains
-    the program.
+    The CPU should be in reset before running this function.
     """
 
     program = [int(instruction) for instruction in program]
@@ -304,17 +329,18 @@ async def _upload_program(
         for instruction in program
     )
 
-    cpu_reset = dut.data_in_2
-    mem_reset = dut.data_in_3
     uart_rx = dut.data_in_4
+    uart_reset = dut.data_in_5
 
-    # Put the CPU in reset while we're updating the PROM
-    cpu_reset.value = 1
+    uart_reset.value = 0
+    await ClockCycles(dut.clk, 2)
 
-    # Reset the memory
-    mem_reset.value = 1
-    await ClockCycles(dut.clk, 10)
-    mem_reset.value = 0
+    # Clear PROM
+    await util.uart_send(
+        uart_rx,
+        dut.mbikovitsky_top.BAUD.value,
+        b"\x00\x00" * len(dut.mbikovitsky_top.prom),
+    )
 
     await util.uart_send(uart_rx, dut.mbikovitsky_top.BAUD.value, program_bytes)
 
@@ -324,14 +350,19 @@ async def _upload_program(
     for value, expected in zip(dut.mbikovitsky_top.prom.value, program):
         assert value.integer == expected
 
+    uart_reset.value = 1
+
 
 async def _run_cpu(dut: HierarchyObject, cycles: int):
     cpu_reset = dut.data_in_2
+    mem_reset = dut.data_in_3
 
     # Reset the CPU
     cpu_reset.value = 1
+    mem_reset.value = 1
     await ClockCycles(dut.clk, 2)
     cpu_reset.value = 0
+    mem_reset.value = 0
 
     # Run the CPU for some clocks
     await ClockCycles(dut.clk, cycles)

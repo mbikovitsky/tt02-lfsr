@@ -1,7 +1,7 @@
 module mbikovitsky_top #(
     parameter CLOCK_HZ = 625,
     parameter BAUD = 78,
-    parameter ROM_WORDS = 16
+    parameter ROM_WORDS = 8
 ) (
     input [7:0] io_in,
     output [7:0] io_out
@@ -50,7 +50,7 @@ module mbikovitsky_top #(
 
     wire cpu_reset  = (!mode_cpu) || (mode_cpu && io_in[3]);
     wire mem_reset  = (!mode_cpu) || (mode_cpu && io_in[4]);
-    wire uart_reset = (!mode_cpu) || (mode_cpu && (!io_in[3] || io_in[4]));
+    wire uart_reset = (!mode_cpu) || (mode_cpu && io_in[6]);
     wire uart_rx    = io_in[5];
 
     CPU cpu (
@@ -103,7 +103,7 @@ module mbikovitsky_top #(
         if (mem_reset) begin
             cpu_io_out <= 0;
         end else begin
-            if (memory_we && is_io_out_address) begin
+            if (!cpu_reset && memory_we && is_io_out_address) begin
                 cpu_io_out <= cpu_memory_out[7:0];
             end
         end
