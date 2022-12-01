@@ -27,17 +27,15 @@
     @16385  // IO_OUT
     D=M
     M=M>>
+
+    // (-IO_OUT[0]) & Taps
+    // https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Galois_LFSRs
     @1
     D=D&A
-    @lblXor
-    D;JGT
-
-    @lblLoop
-    M=0;JMP
-
-(lblXor)
+    D=-D
     @142    // Taps - 0x8E
-    D=A
+    D=D&A
+
     @16385  // IO_OUT
     @32767  // Replace with M=D^M (1001000000001000)
 
