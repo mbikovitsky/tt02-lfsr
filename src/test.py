@@ -201,10 +201,8 @@ async def test_io_out(dut: HierarchyObject):
         CInstruction(dest=DestSpec.D, a=0, comp=0b110000),  # D=A
         AInstruction(address=0x4001),  # @0x4001
         CInstruction(dest=DestSpec.M, a=0, comp=0b001100),  # M=D
-        # Read it back and put it in memory location 0
-        CInstruction(dest=DestSpec.D, a=1, comp=0b110000),  # D=M
-        AInstruction(address=0),  # @0
-        CInstruction(dest=DestSpec.M, a=0, comp=0b001100),  # M=D
+        # Increment it in-place
+        CInstruction(dest=DestSpec.M, a=1, comp=0b110111),  # M=M+1
     ]
 
     await _upload_program(dut, program)
@@ -212,10 +210,7 @@ async def test_io_out(dut: HierarchyObject):
     await _run_cpu(dut, len(program) + 1)
 
     # Only the lower 8 bits are actually output
-    assert dut.data_out.value.integer == (value & 0xFF)
-
-    # Check that we can read from io_out, as well
-    assert dut.mbikovitsky_top.ram.value.integer == (value & 0xFF)
+    assert dut.data_out.value.integer == ((value + 1) & 0xFF)
 
 
 @cocotb.test()

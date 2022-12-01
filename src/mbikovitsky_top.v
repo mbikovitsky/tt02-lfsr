@@ -74,8 +74,7 @@ module mbikovitsky_top #(
 
     // Address map (in 16-bit words)
     // ---
-    // 0            -   0               - RAM
-    // 1            -   0x3FFF          - A20 :)
+    // 0            -   0x3FFF          - Zeroes
     // 0x4000       -   0x4000          - io_in (high 8 bits are always 0 on read)
     // 0x4001       -   0x4001          - io_out (high 8 bits are ignored on write,
     //                                            0 on read)
@@ -87,7 +86,7 @@ module mbikovitsky_top #(
     // Route memory reads
     always @(*) begin
         if (is_ram_address) begin
-            cpu_memory_in = ram;
+            cpu_memory_in = 0;
         end else if (is_io_in_address) begin
             cpu_memory_in = {'0, io_in};
         end else if (is_io_out_address) begin
@@ -106,20 +105,6 @@ module mbikovitsky_top #(
         end else begin
             if (memory_we && is_io_out_address) begin
                 cpu_io_out <= cpu_memory_out[7:0];
-            end
-        end
-    end
-
-    // RAM
-
-    reg [15:0] ram;
-
-    always @(posedge clk) begin
-        if (mem_reset) begin
-            ram <= 0;
-        end else begin
-            if (is_ram_address && memory_we) begin
-                ram <= cpu_memory_out;
             end
         end
     end
