@@ -1,6 +1,5 @@
 // IO_OUT   - holds current LFSR state
 // R0       - holds loop count
-// R1       - temp storage
 
 (lblStart)
     @1          // Initial state

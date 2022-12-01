@@ -1,21 +1,13 @@
 module mbikovitsky_top #(
     parameter CLOCK_HZ = 625,
     parameter BAUD = 78,
-    parameter ROM_WORDS = 24,
-    parameter RAM_WORDS = 2  // Must be a power of 2
+    parameter ROM_WORDS = 24
 ) (
     input [7:0] io_in,
     output [7:0] io_out
 );
 
     localparam LFSR_BITS = 5;
-
-    generate
-        if (RAM_WORDS < 2)
-            _ERROR_RAM_SIZE_MUST_BE_AT_LEAST_2_ error();
-        if ((RAM_WORDS & (RAM_WORDS - 1)) != 0)
-            _ERROR_RAM_SIZE_MUST_BE_A_POWER_OF_2_ error();
-    endgenerate
 
     wire clk = io_in[0];
 
@@ -82,8 +74,8 @@ module mbikovitsky_top #(
 
     // Address map (in 16-bit words)
     // ---
-    // 0            -   RAM_WORDS-1     - RAM
-    // RAM_WORDS    -   0x3FFF          - A20 :)
+    // 0            -   0               - RAM
+    // 1            -   0x3FFF          - A20 :)
     // 0x4000       -   0x4000          - io_in (high 8 bits are always 0 on read)
     // 0x4001       -   0x4001          - io_out (high 8 bits are ignored on write,
     //                                            0 on read)
@@ -95,7 +87,7 @@ module mbikovitsky_top #(
     // Route memory reads
     always @(*) begin
         if (is_ram_address) begin
-            cpu_memory_in = ram_data_out;
+            cpu_memory_in = ram;
         end else if (is_io_in_address) begin
             cpu_memory_in = {'0, io_in};
         end else if (is_io_out_address) begin
@@ -118,21 +110,19 @@ module mbikovitsky_top #(
         end
     end
 
-    wire [15:0] ram_data_out;
-
     // RAM
 
-    RAM #(
-        .WORDS(RAM_WORDS),
-        .WORD_WIDTH(16)
-    ) ram (
-        .clk(clk),
-        .reset(mem_reset),
-        .address_i(memory_addr[$clog2(RAM_WORDS)-1:0]),
-        .wr_en_i(is_ram_address ? memory_we : 1'b0),
-        .data_i(cpu_memory_out),
-        .data_o(ram_data_out)
-    );
+    reg [15:0] ram;
+
+    always @(posedge clk) begin
+        if (mem_reset) begin
+            ram <= 0;
+        end else begin
+            if (is_ram_address && memory_we) begin
+                ram <= cpu_memory_out;
+            end
+        end
+    end
 
     // PROM
 

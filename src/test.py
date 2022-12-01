@@ -215,7 +215,7 @@ async def test_io_out(dut: HierarchyObject):
     assert dut.data_out.value.integer == (value & 0xFF)
 
     # Check that we can read from io_out, as well
-    assert dut.mbikovitsky_top.ram.memory.value[0].integer == (value & 0xFF)
+    assert dut.mbikovitsky_top.ram.value.integer == (value & 0xFF)
 
 
 @cocotb.test()
