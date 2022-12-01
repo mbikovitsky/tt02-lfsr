@@ -60,7 +60,7 @@ module mbikovitsky_top #(
         .next_instruction_addr_o(next_instruction_addr),
         .memory_addr_o(memory_addr),
         .memory_we_o(memory_we),
-        .memory_i(cpu_memory_in),
+        .memory_i(cpu_io_out),
         .memory_o(cpu_memory_out)
     );
 
@@ -69,7 +69,6 @@ module mbikovitsky_top #(
 
     wire [14:0] memory_addr;
     wire        memory_we;
-    reg  [15:0] cpu_memory_in;
     wire [15:0] cpu_memory_out;
 
     // Address map (in 16-bit words)
@@ -79,31 +78,13 @@ module mbikovitsky_top #(
     // 0x4001       -   0x4001          - io_out (high 8 bits are ignored on write,
     //                                            0 on read)
 
-    wire is_ram_address = !memory_addr[14];
-    wire is_io_in_address = (!is_ram_address) && (memory_addr[0] == 0);
-    wire is_io_out_address = (!is_ram_address) && (memory_addr[0] == 1);
-
-    // Route memory reads
-    always @(*) begin
-        if (is_ram_address) begin
-            cpu_memory_in = 0;
-        end else if (is_io_in_address) begin
-            cpu_memory_in = {'0, io_in};
-        end else if (is_io_out_address) begin
-            cpu_memory_in = {'0, cpu_io_out};
-        end else begin
-            // Reads from any other address return 0xFF
-            cpu_memory_in = '1;
-        end
-    end
-
     // I/O output
     reg [7:0] cpu_io_out;
     always @(posedge clk) begin
         if (mem_reset) begin
             cpu_io_out <= 0;
         end else begin
-            if (!cpu_reset && memory_we && is_io_out_address) begin
+            if (!cpu_reset && memory_we) begin
                 cpu_io_out <= cpu_memory_out[7:0];
             end
         end
