@@ -1,7 +1,7 @@
 module mbikovitsky_top #(
     parameter CLOCK_HZ = 625,
     parameter BAUD = 78,
-    parameter ROM_WORDS = 24
+    parameter ROM_WORDS = 16
 ) (
     input [7:0] io_in,
     output [7:0] io_out
