@@ -9,25 +9,21 @@
     M=D
 
 (lblLoop)
-    // Each instruction takes a cycle, and there are 10 instructions in the
-    // busy loop, so we need 625 loops to wait a second, with a clock speed
+    // Each instruction takes a cycle, and there are 8 instructions in the
+    // busy loop, so we need 781.25 loops to wait a second, with a clock speed
     // of 6250 Hz.
     @R0
     D=M
-    @624
+    @781
     D=D-A
     @lblNext
     D;JEQ
 
-    @R0
-    M=M+1
-    @lblLoop
-    0;JMP
+    @lblLoop    // Since lblLoop is at address 4, and we have only 2 RAM slots,
+                // this wraps around to 0 :)
+    M=M+1;JMP
 
 (lblNext)
-    @R0
-    M=0
-
     @16385  // IO_OUT
     D=M
     M=M>>
@@ -37,7 +33,7 @@
     D;JGT
 
     @lblLoop
-    0;JMP
+    M=0;JMP
 
 (lblXor)
     // R1 = ~(IO_OUT & Taps)
@@ -60,4 +56,4 @@
     M=D
 
     @lblLoop
-    0;JMP
+    M=0;JMP
