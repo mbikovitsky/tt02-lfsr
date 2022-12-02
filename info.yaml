@@ -19,11 +19,12 @@ documentation:
   description:  "5-bit Galois LFSR with configurable taps and initial state. Outputs a value every second."
   how_it_works: "https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Galois_LFSRs"
   how_to_test:  |
-    1. Set the desired initial state using the switches
-    2. Assert the reset_lfsr & reset_taps pins
-    3. Deassert reset_lfsr
-    4. Set the desired taps
-    6. Deassert reset_taps
+    1. Set the desired taps using the switches
+    2. Assert the reset_taps pin
+    3. Deassert reset_taps
+    4. Set the desired initial state
+    5. Assert reset_lfsr
+    6. Deassert reset_lfsr
     7. Look at it go!
        - Values between 0x00-0x0F are output as hex digits.
        - Values between 0x10-0x1F are output as hex digits with a dot.

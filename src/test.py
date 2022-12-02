@@ -353,18 +353,17 @@ async def _test_lfsr(dut: HierarchyObject, initial_state: int, taps: int):
         [dut.data_in_2, dut.data_in_3, dut.data_in_4, dut.data_in_5, dut.data_in_6]
     )
 
-    reset_lfsr.value = 1
     reset_taps.value = 1
-
-    data_in.value = initial_state
-    await ClockCycles(dut.clk, 10)
-    assert data_in.value == initial_state
-    reset_lfsr.value = 0
-
     data_in.value = taps
     await ClockCycles(dut.clk, 10)
     assert data_in.value == taps
     reset_taps.value = 0
+
+    reset_lfsr.value = 1
+    data_in.value = initial_state
+    await ClockCycles(dut.clk, 10)
+    assert data_in.value == initial_state
+    reset_lfsr.value = 0
 
     encountered = set()
 
