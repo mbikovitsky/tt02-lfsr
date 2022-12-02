@@ -58,16 +58,14 @@ module mbikovitsky_top #(
         .reset(cpu_reset),
         .instruction(instruction),
         .next_instruction_addr_o(next_instruction_addr),
-        .memory_addr_o(memory_addr),
         .memory_we_o(memory_we),
-        .memory_i(cpu_io_out),
+        .memory_i({8'b0, cpu_io_out}),
         .memory_o(cpu_memory_out)
     );
 
     wire [15:0] instruction;
     wire [14:0] next_instruction_addr;
 
-    wire [14:0] memory_addr;
     wire        memory_we;
     wire [15:0] cpu_memory_out;
 

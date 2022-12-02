@@ -34,7 +34,6 @@ module lfsr #(
     output [BITS-1:0] state_o
 );
 
-    reg [BITS-1:0] taps;
     reg [BITS-1:0] lfsr;
 
     localparam TICK_BITS = ($clog2(TICKS) == 0) ? 1 : $clog2(TICKS);
@@ -43,18 +42,17 @@ module lfsr #(
     assign state_o = lfsr;
 
     always @(posedge clk) begin
-        if (reset_taps_i) begin
-            taps <= taps_i;
-        end else if (reset_lfsr_i) begin
+        if (reset_lfsr_i) begin
             tick_count <= 0;
             lfsr <= initial_state_i;
+        end else if (reset_taps_i) begin
         end else begin
             if (tick_count == TICKS - 1) begin
                 tick_count <= 0;
 
                 // Advance the LFSR
                 if (lfsr[0]) begin
-                    lfsr <= (lfsr >> 1) ^ taps;
+                    lfsr <= (lfsr >> 1) ^ taps_i;
                 end else begin
                     lfsr <= (lfsr >> 1);
                 end
