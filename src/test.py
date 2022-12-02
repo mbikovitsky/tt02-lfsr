@@ -162,9 +162,7 @@ async def test_io_out(dut: HierarchyObject):
     program = [
         # Write our value to io_out
         AInstruction(address=value),  # @value
-        CInstruction(dest=DestSpec.D, a=0, comp=0b110000),  # D=A
-        AInstruction(address=0x4001),  # @0x4001
-        CInstruction(dest=DestSpec.M, a=0, comp=0b001100),  # M=D
+        CInstruction(dest=DestSpec.M, a=0, comp=0b110000),  # M=A
         # Increment it in-place
         CInstruction(dest=DestSpec.M, a=1, comp=0b110111),  # M=M+1
     ]
@@ -177,7 +175,7 @@ async def test_io_out(dut: HierarchyObject):
     assert dut.data_out.value.integer == ((value + 1) & 0xFF)
 
 
-@cocotb.test()
+@cocotb.test(skip=True)
 async def test_lfsr_program(dut: HierarchyObject):
     cpu_reset = dut.data_in_2
     mem_reset = dut.data_in_3
