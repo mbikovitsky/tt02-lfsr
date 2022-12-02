@@ -537,7 +537,7 @@ async def _enter_cpu_mode(dut: HierarchyObject):
     uart_reset.value = 1
 
     uart_rx = dut.data_in_4
-    uart_rx.value = 1   # Make sure the UART doesn't do anything
+    uart_rx.value = 1  # Make sure the UART doesn't do anything
 
     await ClockCycles(dut.clk, 2)
 
@@ -575,11 +575,16 @@ async def _upload_program(
     await ClockCycles(dut.clk, 2)
 
     if not GATE_LEVEL:
-        for (index, value) in enumerate(dut.mbikovitsky_top.prom.value):
-            dut._log.info(f"0x{index:X} - 0x{value.integer:X}")
+        dut._log.info("PROM contents:")
+        for i in range(_prom_size(dut)):
+            dut._log.info(f"0x{i:X} - 0x{dut.mbikovitsky_top.prom.value[i].integer:X}")
 
-        for value, expected in zip(dut.mbikovitsky_top.prom.value, program):
-            assert value.integer == expected
+        dut._log.info("Expected contents:")
+        for i in range(len(program)):
+            dut._log.info(f"0x{i:X} - 0x{program[i]:X}")
+
+        for i in range(len(program)):
+            assert dut.mbikovitsky_top.prom.value[i].integer == program[i]
 
     uart_reset.value = 1
 
