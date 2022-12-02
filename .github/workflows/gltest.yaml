@@ -1,0 +1,89 @@
+name: gltest
+# either manually started, or on a schedule
+on:
+  workflow_run:
+    workflows: [gds]
+    types:
+      - completed
+jobs:
+  test:
+    env:
+        OPENLANE_IMAGE_NAME:    efabless/openlane:2022.07.02_01.38.08
+        OPENLANE_ROOT:          /home/runner/openlane
+        PDK_ROOT:               /home/runner/pdk
+        PDK:                    sky130B
+    # ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      # need the repo checked out
+      - name: checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
+      - name: get GDS output
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: context.payload.workflow_run.id,
+            });
+            let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "GDS"
+            })[0];
+            let download = await github.rest.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            let fs = require('fs');
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/GDS.zip`, Buffer.from(download.data));
+
+      - name: unzip GL verilog
+        run: |
+          unzip -j GDS.zip 'runs/wokwi/results/final/verilog/gl/mbikovitsky_top.v'
+          mv mbikovitsky_top.v src/mbikovitsky_top.gl.v
+
+      # build PDK
+      - name: pdk
+        run: |
+          cd $HOME
+          git clone https://github.com/efabless/caravel_user_project.git -b mpw-7a
+          cd caravel_user_project
+          make install pdk-with-volare
+
+      # install iverilog
+      - name: install iverilog
+        run: |
+          sudo apt -y install iverilog
+          iverilog -V
+
+      - name: install Python
+        uses: gabrielfalcao/pyenv-action@v10
+        env:
+          # http://lucasbrasilino.com/posts/Installing-cocotb-with-pyenv-on-ubuntu/
+          PYTHON_CONFIGURE_OPTS: --enable-shared
+        with:
+          default: 3.8.10
+
+      - name: install test deps
+        run: |
+          pip install pipenv
+          pipenv install
+
+      - name: test
+        run: |
+          pipenv run test
+          # make will return success even if the test fails, so check for failure in the results.xml
+          ! grep failure src/results.xml
+
+      - name: test GL
+        run: |
+          pipenv run test_gl
+          # make will return success even if the test fails, so check for failure in the results.xml
+          ! grep failure src/results.xml
+
