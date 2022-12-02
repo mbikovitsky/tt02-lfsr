@@ -11,6 +11,9 @@ from galois import GF2, GLFSR
 
 import util
 
+GATE_LEVEL: bool = "GATE_LEVEL" in cocotb.plusargs
+
+
 LFSR_BITS = 5
 
 
@@ -144,9 +147,7 @@ async def test_upload_program(dut: HierarchyObject):
 
     await _enter_cpu_mode(dut)
 
-    program = [
-        random.randint(0x0000, 0xFFFF) for _ in range(len(dut.mbikovitsky_top.prom))
-    ]
+    program = [random.randint(0x0000, 0xFFFF) for _ in range(_prom_size(dut))]
 
     await _upload_program(dut, program)
 
@@ -286,7 +287,7 @@ async def _upload_program(
     """
 
     program = [int(instruction) for instruction in program]
-    assert len(program) <= len(dut.mbikovitsky_top.prom)
+    assert len(program) <= _prom_size(dut)
 
     program_bytes = b"".join(
         instruction.to_bytes(2, byteorder="little", signed=False)
@@ -300,19 +301,15 @@ async def _upload_program(
     await ClockCycles(dut.clk, 2)
 
     # Clear PROM
-    await util.uart_send(
-        uart_rx,
-        dut.mbikovitsky_top.BAUD.value,
-        b"\x00\x00" * len(dut.mbikovitsky_top.prom),
-    )
-
-    await util.uart_send(uart_rx, dut.mbikovitsky_top.BAUD.value, program_bytes)
+    await util.uart_send(uart_rx, _baud_rate(dut), b"\x00\x00" * _prom_size(dut))
+    await util.uart_send(uart_rx, _baud_rate(dut), program_bytes)
 
     # Wait for last write to propagate
     await ClockCycles(dut.clk, 2)
 
-    for value, expected in zip(dut.mbikovitsky_top.prom.value, program):
-        assert value.integer == expected
+    if not GATE_LEVEL:
+        for value, expected in zip(dut.mbikovitsky_top.prom.value, program):
+            assert value.integer == expected
 
     uart_reset.value = 1
 
@@ -384,10 +381,28 @@ async def _test_lfsr(dut: HierarchyObject, initial_state: int, taps: int):
 
 
 def _start_clock(dut: HierarchyObject):
-    clock_hz = int(
-        cocotb.plusargs.get("SIM_CLOCK_HZ", dut.mbikovitsky_top.CLOCK_HZ.value)
+    clock_hz = (
+        int(cocotb.plusargs["SIM_CLOCK_HZ"])
+        if GATE_LEVEL or "SIM_CLOCK_HZ" in cocotb.plusargs
+        else dut.mbikovitsky_top.CLOCK_HZ.value
     )
     util.start_clock(dut, clock_hz)
+
+
+def _baud_rate(dut: HierarchyObject) -> int:
+    return (
+        int(cocotb.plusargs["SIM_BAUD"])
+        if GATE_LEVEL or "SIM_BAUD" in cocotb.plusargs
+        else dut.mbikovitsky_top.BAUD.value
+    )
+
+
+def _prom_size(dut: HierarchyObject) -> int:
+    return (
+        int(cocotb.plusargs["SIM_PROM_SIZE"])
+        if GATE_LEVEL or "SIM_PROM_SIZE" in cocotb.plusargs
+        else len(dut.mbikovitsky_top.prom)
+    )
 
 
 def _random_initial_state() -> int:

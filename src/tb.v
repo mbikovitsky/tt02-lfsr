@@ -24,6 +24,10 @@ module tb (
     #(.CLOCK_HZ(`CLOCK_HZ))
 `endif
     mbikovitsky_top (
+`ifdef GL_TEST
+        .vccd1(1'b1),
+        .vssd1(1'b0),
+`endif
         .io_in ({data_in_6, data_in_5, data_in_4, data_in_3, data_in_2, data_in_1, data_in_0, clk}),
         .io_out (data_out)
     );

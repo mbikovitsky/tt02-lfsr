@@ -17,7 +17,8 @@ isort = "*"
 python_version = "3.8"
 
 [scripts]
-test = "env make -C ./src clean sim"
+test = "make -C ./src clean sim"
+test_gl = "env GATES=yes SIM_CLOCK_HZ=625 SIM_BAUD=78 SIM_PROM_SIZE=4 make -C ./src clean sim"
 test_uart = "make -C ./src -f Makefile_uart clean sim"
 test_uart_loopback = "make -C ./src -f Makefile_uart clean sim TESTCASE=test_loopback"
 test_ram = "make -C ./src -f Makefile_ram clean sim"
