@@ -1,6 +1,7 @@
 import ctypes
 import os.path
 import random
+import warnings
 from enum import IntEnum, IntFlag
 from typing import Iterable, List, Union
 
@@ -574,19 +575,35 @@ async def _upload_program(
     # Wait for last write to propagate
     await ClockCycles(dut.clk, 2)
 
-    if not GATE_LEVEL:
-        dut._log.info("PROM contents:")
-        for i in range(_prom_size(dut)):
-            dut._log.info(f"0x{i:X} - 0x{dut.mbikovitsky_top.prom.value[i].integer:X}")
-
-        dut._log.info("Expected contents:")
-        for i in range(len(program)):
-            dut._log.info(f"0x{i:X} - 0x{program[i]:X}")
-
-        for i in range(len(program)):
-            assert dut.mbikovitsky_top.prom.value[i].integer == program[i]
-
     uart_reset.value = 1
+
+    if GATE_LEVEL:
+        # We can't easily get the PROM contents in gate-level simulation.
+        return
+
+    # Enumerate PROM contents explicitly from low address to high.
+    # (Arrays in cocotb are iterated from left to right, which may actually
+    # be high-to-low, depending on the Verilog definition.)
+    prom = [dut.mbikovitsky_top.prom.value[i].integer for i in range(_prom_size(dut))]
+
+    if prom[: len(program)] == program:
+        return
+
+    prom.reverse()
+
+    if prom[: len(program)] == program:
+        warnings.warn("Arrays are reversed in this simulator")
+        return
+
+    dut._log.info("PROM contents:")
+    for i, value in enumerate(prom):
+        dut._log.info(f"0x{i:X} - 0x{value:X}")
+
+    dut._log.info("Expected contents:")
+    for i, value in enumerate(program):
+        dut._log.info(f"0x{i:X} - 0x{value:X}")
+
+    assert False
 
 
 async def _run_cpu(dut: HierarchyObject, cycles: int):
