@@ -81,9 +81,26 @@ jobs:
           # make will return success even if the test fails, so check for failure in the results.xml
           ! grep failure src/results.xml
 
+      - name: test results
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+            name: Test results
+            path: |
+              src/results.xml
+              src/tb.vcd
+
       - name: test GL
         run: |
           pipenv run test_gl
           # make will return success even if the test fails, so check for failure in the results.xml
           ! grep failure src/results.xml
 
+      - name: test GL results
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+            name: Test GL results
+            path: |
+              src/results.xml
+              src/tb.vcd
