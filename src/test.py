@@ -536,6 +536,9 @@ async def _enter_cpu_mode(dut: HierarchyObject):
     uart_reset = dut.data_in_5
     uart_reset.value = 1
 
+    uart_rx = dut.data_in_4
+    uart_rx.value = 1   # Make sure the UART doesn't do anything
+
     await ClockCycles(dut.clk, 2)
 
 
@@ -558,6 +561,8 @@ async def _upload_program(
 
     uart_rx = dut.data_in_4
     uart_reset = dut.data_in_5
+
+    assert uart_rx.value.integer == 1
 
     uart_reset.value = 0
     await ClockCycles(dut.clk, 2)
