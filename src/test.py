@@ -575,6 +575,9 @@ async def _upload_program(
     await ClockCycles(dut.clk, 2)
 
     if not GATE_LEVEL:
+        for (index, value) in enumerate(dut.mbikovitsky_top.prom.value):
+            dut._log.info(f"0x{index:X} - 0x{value.integer:X}")
+
         for value, expected in zip(dut.mbikovitsky_top.prom.value, program):
             assert value.integer == expected
 
