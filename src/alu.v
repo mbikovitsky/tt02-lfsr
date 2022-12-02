@@ -1,3 +1,19 @@
+/*
+ * ALU based on the Nand2Tetris course at the Hebrew University of Jerusalem.
+ *
+ * Signals:
+ *  x:           First input.
+ *  y:           Second input.
+ *  zx:          If high, the (x) input is treated as 0, instead.
+ *  nx:          If high, the (x) input is inverted, after applying (zx).
+ *  zy:          If high, the (y) input is treated as 0, instead.
+ *  ny:          If high, the (y) input is inverted, after applying (zy).
+ *  f:           If high, computes (x + y). Otherwise, (x & y).
+ *  no:          If high, the computation result is inverted.
+ *  out:         Operation result.
+ *  zr:          Indicates whether the result is 0.
+ *  ng:          Indicates whether the result is negative.
+ */
 module ALU (
     input  signed   [15:0]  x,
     input  signed   [15:0]  y,

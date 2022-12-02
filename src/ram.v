@@ -1,3 +1,18 @@
+/*
+ * Single port RAM.
+ *
+ * Parameters:
+ *  WORDS:          Number of RAM cells.
+ *  WORD_WIDTH:     Width of each cell, in bits.
+ *
+ * Signals:
+ *  clk:        Input clock. All transitions happen on (posedge clk).
+ *  reset:      Active-high reset. Synchronous to (clk).
+ *  address_i:  Address.
+ *  wr_en_i:    Write-enable.
+ *  data_i:     Data to be written if (wr_en_i) is high.
+ *  data_o:     Data currently at address (address_i).
+ */
 module RAM #(
     parameter WORDS      = 1024,
     parameter WORD_WIDTH = 8

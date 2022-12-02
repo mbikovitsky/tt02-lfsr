@@ -1,3 +1,14 @@
+/*
+ * Extended ALU based on the Nand2Tetris course at the Hebrew University of Jerusalem.
+ *
+ * Signals:
+ *  x:           First input.
+ *  y:           Second input.
+ *  instruction: Encodes the operation to perform.
+ *  out:         Operation result.
+ *  zr:          Indicates whether the result is 0.
+ *  ng:          Indicates whether the result is negative.
+ */
 module ExtendALU (
     input  signed   [15:0]  x,
     input  signed   [15:0]  y,

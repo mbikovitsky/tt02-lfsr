@@ -1,3 +1,16 @@
+/*
+ * Extended CPU based on the Nand2Tetris course at the Hebrew University of Jerusalem.
+ *
+ * Signals:
+ *  clk:                        Input clock. All transitions happen on (posedge clk).
+ *  reset:                      Active-high reset. Synchronous to (clk).
+ *  instruction:                Current instruction.
+ *  next_instruction_addr_o:    Outputs the address of the next instruction.
+ *  memory_addr_o:              Memory address to operate on.
+ *  memory_we_o:                Whether to write the contents of (memory_o) to memory.
+ *  memory_i:                   Current value at memory address (memory_addr_o).
+ *  memory_o:                   Memory output value.
+ */
 module CPU (
     input           clk,
     input           reset,
@@ -79,15 +92,6 @@ module CPU (
     // to control the extended ALU functions. Again, these map nicely to
     // bits 7 and 8 of the ALU input, so we can forward them as well.
     // See the documentation for the extended ALU for more insight.
-    //
-    // There is one small caveat, however. The extended CPU spec. dictates
-    // that when performing shifts, bit 11 of the instructions should be
-    // set to 1 when operating on the D register. This implementation, however,
-    // does not enforce this restriction, and allows this bit to be 0, as well.
-    // This does not change the functionality of the CPU, but simply allows
-    // for another instruction encoding for the same operation. Since invoking
-    // illegal instructions is undefined behaviour, this is nothing
-    // to worry about.
     ExtendALU alu (
         .x(d_reg),
         .y(instruction[12] ? memory_i : a_reg),

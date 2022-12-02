@@ -28,6 +28,7 @@ documentation:
     7. Look at it go!
        - Values between 0x00-0x0F are output as hex digits.
        - Values between 0x10-0x1F are output as hex digits with a dot.
+    8. Did you know there is a secret CPU inside?
   external_hw:  ""
   language:     "verilog"
   doc_link:     ""
