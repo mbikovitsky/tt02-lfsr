@@ -89,15 +89,17 @@ class CInstruction(ctypes.Union):
             ("dest", ctypes.c_uint16, 3),
             ("comp", ctypes.c_uint16, 6),
             ("a", ctypes.c_uint16, 1),
-            ("reserved0_1", ctypes.c_uint16, 3),
+            ("extended", ctypes.c_uint16, 2),
+            ("reserved0_1", ctypes.c_uint16, 1),
         )
 
     _anonymous_ = ("u",)
     _fields_ = (("u", _Bits), ("full", ctypes.c_uint16))
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, extended=0b11, **kwargs):
         super().__init__(*args, **kwargs)
-        self.reserved0_1 = 0b111
+        self.extended = extended
+        self.reserved0_1 = 0b1
 
     def __int__(self) -> int:
         return self.full
@@ -174,6 +176,266 @@ async def test_io_out(dut: HierarchyObject):
 
     # Only the lower 8 bits are actually output
     assert dut.data_out.value.integer == ((value + 1) & 0xFF)
+
+
+@cocotb.test()
+async def test_add(dut: HierarchyObject):
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    x = random.randint(0x0000, 0x7FFF)
+    y = random.randint(0x0000, 0x7FFF)
+
+    program = [
+        AInstruction(address=x),  # @x
+        CInstruction(dest=DestSpec.D, a=0, comp=0b110000),  # D=A
+        AInstruction(address=y),  # @y
+        CInstruction(dest=DestSpec.M, a=0, comp=0b000010),  # M=D+A
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) * 3)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == ((x + y) & 0xFF)
+
+
+@cocotb.test()
+async def test_sub(dut: HierarchyObject):
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    x = random.randint(0x0000, 0x7FFF)
+    y = random.randint(0x0000, 0x7FFF)
+
+    program = [
+        AInstruction(address=x),  # @x
+        CInstruction(dest=DestSpec.D, a=0, comp=0b110000),  # D=A
+        AInstruction(address=y),  # @y
+        CInstruction(dest=DestSpec.M, a=0, comp=0b010011),  # M=D-A
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) * 3)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == ((x - y) & 0xFF)
+
+
+@cocotb.test()
+async def test_and(dut: HierarchyObject):
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    x = random.randint(0x0000, 0x7FFF)
+    y = random.randint(0x0000, 0x7FFF)
+
+    program = [
+        AInstruction(address=x),  # @x
+        CInstruction(dest=DestSpec.D, a=0, comp=0b110000),  # D=A
+        AInstruction(address=y),  # @y
+        CInstruction(dest=DestSpec.M, a=0, comp=0b000000),  # M=D&A
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) * 3)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == ((x & y) & 0xFF)
+
+
+@cocotb.test()
+async def test_or(dut: HierarchyObject):
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    x = random.randint(0x0000, 0x7FFF)
+    y = random.randint(0x0000, 0x7FFF)
+
+    program = [
+        AInstruction(address=x),  # @x
+        CInstruction(dest=DestSpec.D, a=0, comp=0b110000),  # D=A
+        AInstruction(address=y),  # @y
+        CInstruction(dest=DestSpec.M, a=0, comp=0b010101),  # M=D|A
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) * 3)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == ((x | y) & 0xFF)
+
+
+@cocotb.test()
+async def test_xor(dut: HierarchyObject):
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    x = random.randint(0x0000, 0x7FFF)
+    y = random.randint(0x0000, 0x7FFF)
+
+    program = [
+        AInstruction(address=x),  # @x
+        CInstruction(dest=DestSpec.D, a=0, comp=0b110000),  # D=A
+        AInstruction(address=y),  # @y
+        CInstruction(dest=DestSpec.M, extended=0b00, a=0, comp=0b000000),  # M=D^A
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) * 3)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == ((x ^ y) & 0xFF)
+
+
+@cocotb.test()
+async def test_not(dut: HierarchyObject):
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    x = random.randint(0x0000, 0x7FFF)
+
+    program = [
+        AInstruction(address=x),  # @x
+        CInstruction(dest=DestSpec.M, a=0, comp=0b110001),  # M=!A
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) * 3)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == ((~x) & 0xFF)
+
+
+@cocotb.test()
+async def test_neg(dut: HierarchyObject):
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    x = random.randint(0x0000, 0x7FFF)
+
+    program = [
+        AInstruction(address=x),  # @x
+        CInstruction(dest=DestSpec.M, a=0, comp=0b110011),  # M=-A
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) * 3)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == ((-x) & 0xFF)
+
+
+@cocotb.test()
+async def test_zero(dut: HierarchyObject):
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    program = [
+        CInstruction(dest=DestSpec.M, a=0, comp=0b101010),  # M=0
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) * 3)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == 0
+
+
+@cocotb.test()
+async def test_one(dut: HierarchyObject):
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    program = [
+        CInstruction(dest=DestSpec.M, a=0, comp=0b111111),  # M=1
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) * 3)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == 1
+
+
+@cocotb.test()
+async def test_minus_one(dut: HierarchyObject):
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    program = [
+        CInstruction(dest=DestSpec.M, a=0, comp=0b111010),  # M=-1
+    ]
+
+    await _upload_program(dut, program)
+
+    await _run_cpu(dut, len(program) * 3)
+
+    # Only the lower 8 bits are actually output
+    assert dut.data_out.value.integer == 0xFF
+
+
+@cocotb.test()
+async def test_multi_stage(dut: HierarchyObject):
+    cpu_reset = dut.data_in_2
+    mem_reset = dut.data_in_3
+
+    _start_clock(dut)
+
+    await _enter_cpu_mode(dut)
+
+    x = random.randint(0x0000, 0x7FFF)
+
+    first_stage = [
+        AInstruction(address=x),  # @x
+        CInstruction(dest=DestSpec.M, a=0, comp=0b110011),  # M=-A
+    ]
+
+    await _upload_program(dut, first_stage)
+
+    # Run first stage
+    cpu_reset.value = 0
+    mem_reset.value = 0
+    await ClockCycles(dut.clk, len(first_stage) * 3)
+
+    assert dut.data_out.value.integer == (-x) & 0xFF
+
+    second_stage = [
+        CInstruction(dest=DestSpec.M, extended=0b01, a=1, comp=0b000000),  # M=M>>
+        CInstruction(dest=DestSpec.M, extended=0b01, a=1, comp=0b000000),  # M=M>>
+        AInstruction(address=3),
+        CInstruction(jump=JumpSpec.JMP),
+    ]
+
+    for i in range(1, 3):
+        cpu_reset.value = 1
+
+        await _upload_program(dut, second_stage)
+
+        # Run second stage
+        cpu_reset.value = 0
+        await ClockCycles(dut.clk, len(second_stage) * 3)
+
+        assert dut.data_out.value.integer == ((-x) >> (i * 2)) & 0xFF
 
 
 @cocotb.test(skip=True)
