@@ -13,7 +13,7 @@ module mbikovitsky_top #(
 
     wire mode_cpu = reset_lfsr & reset_taps;
 
-    assign io_out = mode_cpu ? cpu_io_out : segments;
+    assign io_out = mode_cpu ? cpu_io_out[7:0] : segments;
 
     //
     // LFSR
@@ -59,7 +59,7 @@ module mbikovitsky_top #(
         .instruction(instruction),
         .next_instruction_addr_o(next_instruction_addr),
         .memory_we_o(memory_we),
-        .memory_i({8'b0, cpu_io_out}),
+        .memory_i(cpu_io_out),
         .memory_o(cpu_memory_out)
     );
 
@@ -77,13 +77,13 @@ module mbikovitsky_top #(
     //                                            0 on read)
 
     // I/O output
-    reg [7:0] cpu_io_out;
+    reg [15:0] cpu_io_out;
     always @(posedge clk) begin
         if (mem_reset) begin
             cpu_io_out <= 0;
         end else begin
             if (!cpu_reset && memory_we) begin
-                cpu_io_out <= cpu_memory_out[7:0];
+                cpu_io_out <= cpu_memory_out;
             end
         end
     end
